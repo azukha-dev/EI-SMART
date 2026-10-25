@@ -124,7 +124,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text
 .login-input::placeholder{color:rgba(255,255,255,.25);}
 .login-input:focus{border-color:var(--teal);background:rgba(0,194,179,.06);}
 .login-wrap{margin-bottom:14px;}
-
+/* Perbaikan autofill: pertahankan latar gelap & teks putih */
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active{
+  -webkit-text-fill-color:#ffffff !important;
+  caret-color:#ffffff;
+  -webkit-box-shadow:0 0 0 1000px #1a2e45 inset !important;
+  box-shadow:0 0 0 1000px #1a2e45 inset !important;
+  border-color:var(--teal);
+  transition:background-color 9999s ease-in-out 0s;
+}
+.login-input:autofill{
+  -webkit-text-fill-color:#ffffff !important;
+  box-shadow:0 0 0 1000px #1a2e45 inset !important;
+}
 .login-select{width:100%;padding:13px 15px;background:rgba(255,255,255,.07);border:1.5px solid rgba(0,194,179,.2);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:var(--white);outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none;cursor:pointer;}
 .login-select:focus{border-color:var(--teal);background:rgba(0,194,179,.06);}
 .login-select option{background:var(--ink-2);color:var(--white);}
