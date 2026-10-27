@@ -1647,6 +1647,7 @@ function openPsmDetail(unit, name) {
 
   // ── 1) TAHANAN ISOLASI (MΩ) — PI tanpa warna ──
   html += '<div class="psm-dioda-title">🧊 Tahanan Isolasi (MΩ)</div>';
+  html += '<div class="psm-dioda-avg">Standard: <b>≥ 5 MΩ</b></div>';
   (eq.isolasi || []).forEach(function(sec) {
     var locMap = {}, locOrder = [];
     sec.rows.forEach(function(r) {
@@ -1701,9 +1702,9 @@ function openPsmDetail(unit, name) {
     html += '<div class="psm-dioda-title">🔺 Dioda (mV)</div>';
     html += '<div class="psm-dioda-avg">Rata-rata: <b>' +
             (d.average !== null ? d.average.toFixed(3) : '-') +
-            '</b> &nbsp;•&nbsp; Batas toleransi (±2%): <b>' +
-            (d.lowerBound !== null ? d.lowerBound.toFixed(3) : '-') + ' – ' +
-            (d.upperBound !== null ? d.upperBound.toFixed(3) : '-') + '</b></div>';
+            ' mV</b> &nbsp;•&nbsp; Range: <b>' +
+            (d.lowerBound !== null && d.lowerBound !== undefined ? d.lowerBound : 300) + ' - ' +
+            (d.upperBound !== null && d.upperBound !== undefined ? d.upperBound : 900) + ' mV</b></div>';
 
     html += '<div class="psm-table-wrap"><table class="psm-table"><thead><tr>' +
             '<th>Dioda</th><th>Nilai</th><th>Polaritas Pengukuran</th></tr></thead><tbody>';
@@ -1720,7 +1721,7 @@ function openPsmDetail(unit, name) {
   if (eq.varistor && eq.varistor.length) {
     var anyVaristor = eq.varistor.some(function(r){ return r.text; });
     if (anyVaristor) {
-      html += '<div class="psm-dioda-title">🛡️ Varistor</div>';
+      html += '<div class="psm-dioda-title">🛡️ Varistor (Ω)</div>';
       html += '<div class="psm-table-wrap"><table class="psm-table"><thead><tr>' +
               '<th>Lokasi</th><th>Nilai</th></tr></thead><tbody>';
       eq.varistor.forEach(function(r) {
