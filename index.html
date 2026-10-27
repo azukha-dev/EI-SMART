@@ -789,10 +789,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text
   </div>
   <div class="login-card">
     <div class="login-wrap">
-      <label class="login-label">Nama Lengkap</label>
-      <input id="inp-nama" type="text" class="login-input" placeholder="Masukkan nama Anda">
-    </div>
-    <div class="login-wrap">
       <label class="login-label">Email</label>
       <input id="inp-email" type="email" class="login-input" placeholder="Email terdaftar" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
@@ -1240,11 +1236,9 @@ function showToast(msg, dur) {
    LOGIN
    ============================================================ */
 function doLogin() {
-  var nama  = document.getElementById('inp-nama').value.trim();
   var email = document.getElementById('inp-email').value.trim();
   var errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
-  if (!nama)  { showToast('Masukkan nama Anda'); return; }
   if (!email || !email.includes('@')) { showToast('Masukkan email yang valid'); return; }
   var btn = document.getElementById('btn-login');
   btn.disabled = true; btn.textContent = 'Memverifikasi...';
@@ -1252,7 +1246,7 @@ function doLogin() {
     .withSuccessHandler(function(res) {
       btn.disabled = false; btn.textContent = 'MASUK SEKARANG';
       if (res && res.success) {
-        userData = { nama: nama, email: email, dept: res.dept || '' };
+        userData = { nama: res.nama || '', email: res.email || email, dept: res.dept || '' };
         localStorage.setItem('ilc_user', JSON.stringify(userData));
         goToCategoryPage();
       } else {
