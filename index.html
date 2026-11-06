@@ -677,6 +677,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text
 }
 .vslide iframe{width:100%;height:100%;border:none;}
 
+/* Watermark-on-save */
+.v-stack{position:relative;width:100%;height:100%}
+.vslide .v-stack img{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;-webkit-user-drag:none;user-select:none}
+.vslide .v-stack img.v-clean{pointer-events:none;z-index:1}
+.vslide .v-stack img.v-wm-top{pointer-events:auto;opacity:.01;z-index:2}
+.vthumb img{pointer-events:none}
+
 .vstrip{
   flex-shrink:0;
   background:rgba(0,0,0,.6);
@@ -3246,6 +3253,89 @@ function openViewer(idx) {
   renderViewer();
 }
 
+/* ============================================================
+   WATERMARK SAAT DISIMPAN
+   ============================================================ */
+var WM_LOGO_URL = 'https://lh3.googleusercontent.com/d/1RpuNBKjnn9HXExJFvs3W_IM06xnvKBWY';
+var _wmLogoPromise = null;
+var _wmBlobUrl = null;
+
+function _loadImgCors(src) {
+  return new Promise(function(resolve, reject) {
+    var im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.referrerPolicy = 'no-referrer';
+    im.onload  = function() { resolve(im); };
+    im.onerror = function() { reject(new Error('load gagal')); };
+    im.src = src;
+  });
+}
+
+function _getWmLogo() {
+  if (!_wmLogoPromise) _wmLogoPromise = _loadImgCors(WM_LOGO_URL);
+  return _wmLogoPromise;
+}
+
+function _buildWatermarked(src) {
+  return Promise.all([_loadImgCors(src), _getWmLogo()]).then(function(r) {
+    var img = r[0], logo = r[1];
+
+    var MAXW  = 2000;
+    var scale = Math.min(1, MAXW / img.naturalWidth);
+    var W = Math.round(img.naturalWidth  * scale);
+    var H = Math.round(img.naturalHeight * scale);
+
+    var c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    var ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, W, H);
+
+    // pola logo berulang diagonal
+    var lw = Math.max(120, W * 0.22);
+    var lh = lw * (logo.naturalHeight / logo.naturalWidth);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-Math.PI / 6);
+    var stepX = lw * 1.9, stepY = lh * 3.2;
+    var span  = Math.hypot(W, H);
+    for (var y = -span; y < span; y += stepY) {
+      for (var x = -span; x < span; x += stepX) {
+        ctx.drawImage(logo, x, y, lw, lh);
+      }
+    }
+    ctx.restore();
+
+    // satu logo besar di tengah
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    var bw = W * 0.45, bh = bw * (logo.naturalHeight / logo.naturalWidth);
+    ctx.drawImage(logo, (W - bw) / 2, (H - bh) / 2, bw, bh);
+    ctx.restore();
+
+    return new Promise(function(resolve, reject) {
+      c.toBlob(function(b) {
+        b ? resolve(URL.createObjectURL(b)) : reject(new Error('toBlob gagal'));
+      }, 'image/jpeg', 0.92);
+    });
+  });
+}
+
+function applyViewerWatermark(src) {
+  var top = document.getElementById('v-img-wm');
+  if (!top) return;
+  _buildWatermarked(src).then(function(url) {
+    var el = document.getElementById('v-img-wm');
+    if (!el || el !== top) { URL.revokeObjectURL(url); return; } // sudah pindah slide
+    if (_wmBlobUrl) { try { URL.revokeObjectURL(_wmBlobUrl); } catch (e) {} }
+    _wmBlobUrl = url;
+    el.src = url;   // inilah yang tersimpan saat "Save image as"
+  }).catch(function(e) {
+    // gagal (mis. CORS): biarkan gambar asli, viewer tetap jalan
+    console.warn('Watermark gagal:', e.message);
+  });
+}
+
 function closeViewer() {
   document.getElementById('viewer').classList.remove('open');
   document.getElementById('vbody').innerHTML = '';
@@ -3283,13 +3373,20 @@ function renderViewerContent(m) {
   var fullUrl = toFullUrl(m.url);
   body.innerHTML =
     '<div class="vslide" id="v-slide">' +
-      '<img id="v-img" ' +
-        'src="' + escHtml(fullUrl) + '" ' +
-        'referrerpolicy="no-referrer" ' +
-        'onerror="onViewerImgErr(this,\'' + escHtml(m.url) + '\')" ' +
-        'draggable="false">' +
+      '<div class="v-stack">' +
+        '<img id="v-img" class="v-clean" ' +
+          'src="' + escHtml(fullUrl) + '" ' +
+          'referrerpolicy="no-referrer" ' +
+          'onerror="onViewerImgErr(this,\'' + escHtml(m.url) + '\')" ' +
+          'draggable="false">' +
+        '<img id="v-img-wm" class="v-wm-top" ' +
+          'src="' + escHtml(fullUrl) + '" ' +
+          'referrerpolicy="no-referrer" ' +
+          'draggable="false" alt="">' +
+      '</div>' +
     '</div>';
   initViewerGestures();
+  applyViewerWatermark(fullUrl);
 }
 
 /* ============================================================
@@ -3300,15 +3397,17 @@ function initViewerGestures() {
   if (!body) return;
 
   function applyT(transition) {
-    var img = document.getElementById('v-img');
-    if (!img) return;
-    img.style.transition = transition
-      ? 'transform .28s cubic-bezier(.25,.46,.45,.94)'
-      : 'none';
-    img.style.transform =
-      'translate(' + _tx + 'px,' + _ty + 'px) ' +
-      'scale(' + _scale + ') ' +
-      'rotate(' + vRotDeg + 'deg)';
+    ['v-img', 'v-img-wm'].forEach(function(id) {
+      var img = document.getElementById(id);
+      if (!img) return;
+      img.style.transition = transition
+        ? 'transform .28s cubic-bezier(.25,.46,.45,.94)'
+        : 'none';
+      img.style.transform =
+        'translate(' + _tx + 'px,' + _ty + 'px) ' +
+        'scale(' + _scale + ') ' +
+        'rotate(' + vRotDeg + 'deg)';
+    });
   }
 
   function clampPan() {
@@ -3474,14 +3573,15 @@ function initViewerGestures() {
    ============================================================ */
 function vRotate() {
   vRotDeg = (vRotDeg + 90) % 360;
-  var img = document.getElementById('v-img');
-  if (img) {
+  ['v-img', 'v-img-wm'].forEach(function(id) {
+    var img = document.getElementById(id);
+    if (!img) return;
     img.style.transition = 'transform .35s cubic-bezier(.25,.46,.45,.94)';
     img.style.transform  =
       'translate(' + _tx + 'px,' + _ty + 'px) ' +
       'scale(' + _scale + ') ' +
       'rotate(' + vRotDeg + 'deg)';
-  }
+  });
   var btn = document.getElementById('v-rotate-btn');
   btn.classList.add('spinning');
   setTimeout(function() { btn.classList.remove('spinning'); }, 400);
