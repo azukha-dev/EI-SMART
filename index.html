@@ -8,7 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0d1b2a">
 <title>Electrical & Instrument Monitoring - Learning System</title>
-
+<script>
+/* ===== SAKLAR AKSES APLIKASI =====
+   true  = akses ditutup (tampil pemberitahuan)
+   false = aplikasi normal                      */
+var APP_SUSPENDED = true;
+</script>
 <!-- FAVICON -->
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
@@ -28,6 +33,7 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbyGemGcMAp39HXW7tzHsXaBJr
         if (typeof prop !== 'string') return undefined;
 
         return function() {
+          if (window.APP_SUSPENDED) return;
           var args = Array.prototype.slice.call(arguments);
           // Content-Type text/plain = "simple request", jadi tidak kena CORS preflight
           fetch(GAS_URL, {
@@ -766,11 +772,84 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text
 .splash-wordmark{font-size:clamp(13px,4.4vw,22px);padding:0 20px;}
 .cat-title{white-space:normal;overflow-wrap:anywhere;}
 
+
+/* ===== PEMBERITAHUAN AKSES DITUTUP (1 layar, tanpa scroll) ===== */
+#suspend-overlay{position:fixed;inset:0;z-index:10000;display:none;background:var(--ink);overflow:hidden;}
+html.suspended #suspend-overlay{display:block;}
+html.suspended body{overflow:hidden;}
+.sp-bg{position:fixed;inset:0;pointer-events:none;background:
+  radial-gradient(ellipse 60% 40% at 20% 15%,rgba(245,166,35,.13),transparent 60%),
+  radial-gradient(ellipse 50% 40% at 85% 90%,rgba(0,194,179,.1),transparent 60%),
+  linear-gradient(rgba(0,194,179,.05) 1px,transparent 1px) 0 0/60px 60px,
+  linear-gradient(90deg,rgba(0,194,179,.05) 1px,transparent 1px) 0 0/60px 60px;}
+.sp-main{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;padding:max(12px,env(safe-area-inset-top)) 3vw max(12px,env(safe-area-inset-bottom));}
+.sp-logo{position:relative;width:clamp(44px,9vh,76px);height:clamp(44px,9vh,76px);flex-shrink:0;}
+.sp-logo img{width:100%;height:100%;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 0 18px rgba(245,166,35,.35));}
+.sp-ring,.sp-ring2{position:absolute;border-radius:50%;}
+.sp-ring{inset:-6px;border:1px solid rgba(245,166,35,.4);border-top-color:transparent;animation:spin 9s linear infinite;}
+.sp-ring2{inset:-14px;border:1px dashed rgba(0,194,179,.2);animation:spin 20s linear infinite reverse;}
+.sp-card{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(245,166,35,.28);border-radius:24px;padding:2.5vh 4vw;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);animation:fadeUp .7s ease both;color:#fff;}
+.sp-pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:100px;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);font-size:12px;font-weight:600;color:var(--amber);}
+.sp-pill i{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:spPulse 1.6s ease-in-out infinite;}
+.sp-h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(20px,4.5vh,34px);line-height:1.15;margin:1.5vh 0 1vh;color:#fff;}
+.sp-h1 em{font-style:normal;color:var(--amber);}
+.sp-lead{font-size:clamp(12px,1.9vh,14.5px);line-height:1.5;color:rgba(255,255,255,.72);}
+.sp-steps{margin:1.5vh 0 0;position:relative;padding-left:4px;}
+.sp-steps::before{content:'';position:absolute;left:11px;top:12px;bottom:12px;width:2px;background:linear-gradient(to bottom,var(--teal),var(--amber) 55%,rgba(255,255,255,.15));}
+.sp-step{position:relative;display:flex;gap:14px;padding:.6vh 0;}
+.sp-dot{flex:0 0 16px;height:16px;margin-top:3px;border-radius:50%;background:var(--ink);border:2px solid var(--teal);position:relative;z-index:1;}
+.sp-step.now .sp-dot{border-color:var(--amber);background:var(--amber);box-shadow:0 0 0 5px rgba(245,166,35,.2);animation:spPulse 1.8s ease-in-out infinite;}
+.sp-step.next .sp-dot{border-color:rgba(255,255,255,.3);}
+.sp-step b{display:block;font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(12px,1.9vh,14px);}
+.sp-step span{display:block;font-size:12px;color:var(--text-muted);margin-top:1px;line-height:1.4;}
+.sp-step.next b{color:rgba(255,255,255,.6);}
+.sp-note{margin-top:1.5vh;padding:1.2vh 14px;border-radius:14px;background:rgba(0,194,179,.08);border:1px solid rgba(0,194,179,.22);font-size:clamp(11px,1.7vh,13px);line-height:1.5;color:rgba(255,255,255,.8);}
+.sp-note b{color:#fff;}
+.sp-btn{display:block;width:100%;margin-top:1.5vh;padding:1.4vh;border:none;border-radius:12px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--ink);background:linear-gradient(135deg,var(--amber),var(--amber-dim));box-shadow:0 4px 24px rgba(245,166,35,.28);}
+.sp-btn:active{transform:scale(.97);}
+.sp-foot{text-align:center;font-size:10px;line-height:1.6;color:var(--text-muted);opacity:.65;flex-shrink:0;}
+.sp-foot b{color:var(--teal);}
+@keyframes spPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.25)}}
+@media (min-width:900px){
+  .sp-card{display:grid;grid-template-columns:1.1fr 1fr;column-gap:5vw;align-items:center;}
+  .sp-pill,.sp-h1,.sp-lead,.sp-btn{grid-column:1;justify-self:start;}
+  .sp-btn{max-width:320px;}
+  .sp-steps{grid-column:2;grid-row:1/4;margin:0;}
+  .sp-note{grid-column:2;grid-row:4/6;margin-top:0;}
+}
+@media (max-height:700px){.sp-step span,.sp-logo{display:none;}}
+@media (max-height:560px){.sp-note,.sp-foot{display:none;}}
+@media (prefers-reduced-motion:reduce){.sp-ring,.sp-ring2,.sp-pill i,.sp-step.now .sp-dot,.sp-card{animation:none}}
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
+
+<!-- PEMBERITAHUAN AKSES DITUTUP (aktif jika APP_SUSPENDED = true) -->
+<div id="suspend-overlay" role="alert">
+  <div class="sp-bg"></div>
+  <div class="sp-main">
+    <div class="sp-logo">
+      <div class="sp-ring2"></div><div class="sp-ring"></div>
+      <img src="https://lh3.googleusercontent.com/d/1CwBi7j323RQBIhBoSBpREdp4qNuREx6F" alt="" onerror="this.style.display='none'">
+    </div>
+    <section class="sp-card">
+      <div class="sp-pill"><i></i>Akses ditutup sementara</div>
+      <h1 class="sp-h1">Aplikasi sedang <em>dihentikan</em> sementara</h1>
+      <p class="sp-lead">Akses ke Electrical &amp; Instrument Monitoring - Learning System dihentikan sementara sambil menunggu keputusan dari manajemen. Terima kasih atas pengertian Anda.</p>
+      <div class="sp-steps">
+        <div class="sp-step"><div class="sp-dot"></div><div><b>Aplikasi berjalan</b><span>Pemantauan, materi, dan laporan sudah digunakan.</span></div></div>
+        <div class="sp-step now"><div class="sp-dot"></div><div><b>Akses dihentikan sementara</b><span>Menunggu keputusan manajemen. Kami akan umumkan hasilnya.</span></div></div>
+        <div class="sp-step next"><div class="sp-dot"></div><div><b>Keputusan &amp; tindak lanjut</b><span>Aplikasi dibuka kembali atau ada pemberitahuan resmi berikutnya.</span></div></div>
+      </div>
+      <div class="sp-note"><b>Data Anda aman.</b> Akun, materi, dan laporan yang sudah tersimpan tidak dihapus. Anda tidak perlu mendaftar ulang saat akses dibuka kembali.</div>
+      <button class="sp-btn" onclick="location.reload()">Cek status akses</button>
+    </section>
+    <div class="sp-foot">&copy; <b>Fredy Adnansyah</b> &middot; <b>19000660</b><br>Electrical &amp; Instrument Monitoring - Learning System &mdash; S&amp;I</div>
+  </div>
+</div>
+<script>if (window.APP_SUSPENDED) document.documentElement.classList.add('suspended');</script>
 
 <!-- SPLASH -->
 <div id="splash">
